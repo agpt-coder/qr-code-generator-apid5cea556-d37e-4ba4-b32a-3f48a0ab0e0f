@@ -1,0 +1,115 @@
+// datasource db defines the database connection settings.
+// It is configured for PostgreSQL and uses an environment variable for the connection URL.
+// The 'extensions' feature enables the use of PostgreSQL-specific data types.
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+}
+
+// generator db configures Prisma Client settings.
+// It is set up to use Prisma Client Python with asyncio interface and specific features.
+generator db {
+  provider             = "prisma-client-py"
+  interface            = "asyncio"
+  recursive_type_depth = 5
+  previewFeatures      = ["postgresqlExtensions"]
+}
+
+model QRCodeDynamicLink {
+  id              String         @id @default(dbgenerated("gen_random_uuid()"))
+  qrCodeConfigId  String         @unique
+  dynamicEndpoint String // Endpoint to fetch the dynamic content from
+  securityKey     String // A key or token to secure the endpoint
+  updatedAt       DateTime       @updatedAt
+  QRCodeConfig    QRCodeConfig[]
+}
+
+model User {
+  id             String         @id @default(dbgenerated("gen_random_uuid()"))
+  email          String         @unique
+  hashedPassword String
+  role           UserRole       @default(USER)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  QRCodeConfigs  QRCodeConfig[]
+  APIKeys        APIKey[]
+  RequestLog     RequestLog[]
+}
+
+model QRCodeConfig {
+  id                  String             @id @default(dbgenerated("gen_random_uuid()"))
+  title               String
+  data                String
+  color               String             @default("#8A2BE2") // Default to color violet
+  format              QRFormat           @default(SVG) // Assuming they will only use SVG for the moment
+  size                Int                @default(500) // Default width and height in pixels
+  errorCorrection     ErrorLevel         @default(HIGH)
+  version             Int? // Might be required for manual QR code version control
+  qrStatic            Boolean            @default(false) // If True, content can be changed without generating a new QR code
+  userId              String
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  QRCodeDynamicLinks  QRCodeDynamicLink? @relation(fields: [qRCodeDynamicLinkId], references: [id])
+  User                User               @relation(fields: [userId], references: [id])
+  qRCodeDynamicLinkId String?
+  Analytics           Analytics?
+}
+
+model APIKey {
+  id        String   @id @default(dbgenerated("gen_random_uuid()"))
+  key       String   @unique
+  userId    String
+  createdAt DateTime @default(now())
+  User      User     @relation(fields: [userId], references: [id])
+}
+
+model RequestLog {
+  id        String   @id @default(dbgenerated("gen_random_uuid()"))
+  userId    String?
+  endpoint  String
+  createdAt DateTime @default(now())
+  status    Int // HTTP status code
+  User      User?    @relation(fields: [userId], references: [id])
+}
+
+model Analytics {
+  id             String       @id @default(dbgenerated("gen_random_uuid()"))
+  qrCodeConfigId String       @unique
+  QRCodeConfig   QRCodeConfig @relation(fields: [qrCodeConfigId], references: [id], onDelete: Cascade)
+  scans          Int          @default(0)
+  lastScannedAt  DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model SystemHealth {
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
+  serviceName   String
+  status        HealthStatus
+  lastCheckedAt DateTime     @default(now())
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  INTEGRATOR
+}
+
+enum QRFormat {
+  SVG
+  PNG
+}
+
+enum ErrorLevel {
+  LOW
+  MEDIUM
+  QUARTILE
+  HIGH
+}
+
+enum HealthStatus {
+  OK
+  DEGRADED
+  DOWN
+}
+

@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "qr-code-generator-api"
+version = "0.1.0"
+description = "To address the task effectively, we've engaged in a detailed discussion with the user to understand their specific needs for a QR code generation service. The key requirements gathered from the user are as follows:"
+authors = ["AutoGPT <info@agpt.co>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.11"
+fastapi = "*"
+prisma = "*"
+pydantic = "*"
+qrcode = "*"
+uvicorn = "*"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
